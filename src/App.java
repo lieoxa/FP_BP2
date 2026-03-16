@@ -55,6 +55,7 @@ public class App {
         menuSearcher.displaySearchResults(allMenus, "semua menu");
 
         Map<Integer, Integer> cart = new HashMap<>();
+        Map<Integer, Integer> initialStocks = new HashMap<>();
         double subtotal = 0;
         while (true) {
             System.out.print("Cari menu (nama atau Enter untuk daftar semua lagi, 'selesai' untuk checkout): ");
@@ -85,8 +86,20 @@ public class App {
                 System.out.println("Menu tidak ditemukan.");
                 continue;
             }
-            if ((Integer) menuItem.get("stok") < qty) {
-                System.out.println("Stok tidak cukup. Tersedia: " + menuItem.get("stok"));
+
+            int currentTotalQty = cart.getOrDefault(id, 0) + qty;
+            if (!initialStocks.containsKey(id)) {
+                initialStocks.put(id, (Integer) menuItem.get("stok"));
+            }
+            if (currentTotalQty > initialStocks.get(id)) {
+                String stokMsg = initialStocks.get(id) == 0 ? "Habis" : String.valueOf(initialStocks.get(id));
+                System.out.println("Total pesanan melebihi stok awal. Tersedia: " + stokMsg);
+                continue;
+            }
+            int currStok = (Integer) menuItem.get("stok");
+            if (currStok < qty) {
+                String stokMsg = currStok == 0 ? "Habis" : String.valueOf(currStok);
+                System.out.println("Stok tidak cukup. Tersedia: " + stokMsg);
                 continue;
             }
             cart.put(id, cart.getOrDefault(id, 0) + qty);

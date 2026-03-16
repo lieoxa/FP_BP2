@@ -1,6 +1,8 @@
+
 import java.util.*;
 
 public class MenuSearcher {
+
     private DatabaseManager db = new DatabaseManager();
 
     public List<Map<String, Object>> search(String query) {
@@ -21,14 +23,16 @@ public class MenuSearcher {
         System.out.println("-----------------------------------------------------");
 
         for (Map<String, Object> m : results) {
-            System.out.printf("%-5d %-20s %-15s Rp %,10.0f %-5d%n",
+            int stok = (Integer) m.get("stok");
+            String stokStr = (stok == 0) ? "Habis" : String.valueOf(stok);
+            System.out.printf("%-5d %-20s %-15s Rp %,10.0f %s%n",
                     m.get("id"),
                     m.get("nama"),
                     m.get("kat_nama"),
                     m.get("harga"),
-                    m.get("stok"));
+                    stokStr);
+
         }
         System.out.println("-----------------------------------------------------");
     }
 }
-

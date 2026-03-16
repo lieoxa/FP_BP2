@@ -36,7 +36,7 @@ public class DatabaseManager {
                 stmt.execute("INSERT INTO member (nama, discount) VALUES ('Gold', 0.10)");
                 stmt.execute("INSERT INTO member (nama, discount) VALUES ('Platinum', 0.15)");
                 
-                System.out.println("✅ Database + sample data ready!");
+                // System.out.println("✅ Database + sample data ready!");
             }
         } catch (Exception e) {
             System.err.println("DB Error: " + e.getMessage());

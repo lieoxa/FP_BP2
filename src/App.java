@@ -1,7 +1,8 @@
+
 import java.util.*;
-import java.util.Scanner;
 
 public class App {
+
     private static Scanner scanner = new Scanner(System.in);
     private static MenuSearcher menuSearcher = new MenuSearcher();
     private static DatabaseManager db = new DatabaseManager();
@@ -16,15 +17,20 @@ public class App {
             scanner.nextLine(); // consume newline
 
             switch (choice) {
-                case 1 -> KategoriManager.crudKategori(scanner);
-                case 2 -> MenuManager.crudMenu(scanner);
-                case 3 -> MemberManager.crudMembers(scanner);
-                case 4 -> transaksi();
+                case 1 ->
+                    KategoriManager.crudKategori(scanner);
+                case 2 ->
+                    MenuManager.crudMenu(scanner);
+                case 3 ->
+                    MemberManager.crudMembers(scanner);
+                case 4 ->
+                    transaksi();
                 case 5 -> {
                     System.out.println("Terima kasih!");
                     running = false;
                 }
-                default -> System.out.println("Pilihan tidak valid. Coba lagi.");
+                default ->
+                    System.out.println("Pilihan tidak valid. Coba lagi.");
             }
         }
         scanner.close();
@@ -49,16 +55,22 @@ public class App {
         while (true) {
             System.out.print("Cari menu (nama atau Enter untuk daftar semua lagi, 'selesai' untuk checkout): ");
             String query = scanner.nextLine().trim();
-            if (query.equalsIgnoreCase("selesai")) break;
+            if (query.equalsIgnoreCase("selesai")) {
+                break;
+            }
 
             List<Map<String, Object>> results = menuSearcher.search(query);
             menuSearcher.displaySearchResults(results, query);
-            if (results.isEmpty()) continue;
+            if (results.isEmpty()) {
+                continue;
+            }
 
             System.out.print("ID menu (0 skip): ");
             int id = scanner.nextInt();
             scanner.nextLine();
-            if (id == 0) continue;
+            if (id == 0) {
+                continue;
+            }
 
             System.out.print("Jumlah: ");
             int qty = scanner.nextInt();
@@ -93,8 +105,8 @@ public class App {
                 Map<String, Object> m = db.readMenuById(mid);
                 double harga = (Double) m.get("harga");
                 double itemTotal = harga * q;
-                System.out.printf("%-25s %5d Rp%,10.0f Rp%,12.0f%n", 
-                    m.get("nama"), q, harga, itemTotal);
+                System.out.printf("%-25s %5d Rp%,10.0f Rp%,12.0f%n",
+                        m.get("nama"), q, harga, itemTotal);
             }
 
             System.out.println("=========================================================");
@@ -112,8 +124,8 @@ public class App {
                     disc = (Double) member.get("discount");
                     memberName = (String) member.get("nama");
                     finalTotal = subtotal * (1 - disc);
-                    System.out.printf("Diskon %s (%.0f%%): %50s%n", 
-                        memberName, disc*100, "Rp " + String.format("%,.0f", subtotal * disc));
+                    System.out.printf("Diskon %s (%.0f%%): %50s%n",
+                            memberName, disc * 100, "Rp " + String.format("%,.0f", subtotal * disc));
                 } else {
                     System.out.println("Tingkat member tidak ditemukan.");
                 }
@@ -125,10 +137,42 @@ public class App {
             for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
                 db.updateStok(entry.getKey(), entry.getValue());
             }
-            System.out.println("Terima kasih! Stok otomatis berkurang.");
+
+            // ⭐ BUKTI TRANSAKSI ⭐
+            System.out.println("\n" + "═".repeat(50));
+            System.out.println("                    BUKTI TRANSAKSI");
+            System.out.println("                    WARUNG TEGAL MK");
+            System.out.println("═".repeat(50));
+            System.out.printf("No. Transaksi : #%04d%n", (int) (Math.random() * 10000));
+            System.out.printf("Tanggal       : %s%n", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+            System.out.printf("Kasir         : %s%n", System.getProperty("user.name").toUpperCase());
+            System.out.println("═".repeat(50));
+            System.out.printf("%-25s %5s %10s %12s%n", "Nama Menu", "Qty", "@Harga", "Total");
+            System.out.println("-".repeat(50));
+
+            for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
+                int mid = entry.getKey();
+                int q = entry.getValue();
+                Map<String, Object> m = db.readMenuById(mid);
+                double harga = (Double) m.get("harga");
+                double itemTotal = harga * q;
+                System.out.printf("%-25s %5d %10s %,12.0f%n",
+                        m.get("nama"), q, "Rp" + String.format("%,.0f", harga), itemTotal);
+            }
+
+            System.out.println("═".repeat(50));
+            System.out.printf("%42s: Rp%,8.0f%n", "SUBTOTAL", subtotal);
+            if (disc > 0) {
+                System.out.printf("%42s: -Rp%,8.0f%n", memberName, subtotal * disc);
+            }
+            System.out.printf("%42s: Rp%,8.0f%n", "TOTAL BAYAR", finalTotal);
+            System.out.println("═".repeat(50));
+            System.out.println("Terima kasih telah berbelanja!");
+            System.out.println("       Barang tidak dapat ditukar");
+            System.out.println("       atau dikembalikan.");
+            System.out.println("═".repeat(50));
         } else {
             System.out.println("Keranjang kosong.");
         }
     }
 }
-

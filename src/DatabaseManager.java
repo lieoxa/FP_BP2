@@ -15,55 +15,63 @@ public class DatabaseManager {
             Class.forName("com.mysql.cj.jdbc.Driver");
             try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
                     Statement stmt = conn.createStatement()) {
-                stmt.execute("DROP TABLE IF EXISTS students;");
-                stmt.execute(
-                        "CREATE TABLE IF NOT EXISTS kategori (id INT AUTO_INCREMENT PRIMARY KEY, nama VARCHAR(100) NOT NULL)");
-                stmt.execute(
-                        "CREATE TABLE IF NOT EXISTS menu (id INT AUTO_INCREMENT PRIMARY KEY, nama VARCHAR(100) NOT NULL, kategori_id INT, harga DECIMAL(10,2) NOT NULL, stok INT DEFAULT 0, FOREIGN KEY (kategori_id) REFERENCES kategori(id))");
-                stmt.execute(
-                        "CREATE TABLE IF NOT EXISTS member (id INT AUTO_INCREMENT PRIMARY KEY, nama VARCHAR(100) NOT NULL, discount DECIMAL(5,4) DEFAULT 0.10)");
-
-                stmt.execute("DELETE FROM member");
-                stmt.execute("INSERT INTO member (nama, discount) VALUES ('Silver', 0.05), ('Gold', 0.10), ('Platinum', 0.15)");
-
-                // System.out.println("MySQL Database Connected");
+                // Clean tables
+                stmt.execute("DROP TABLE IF EXISTS menu");
+                stmt.execute("DROP TABLE IF EXISTS kategori");
+                stmt.execute("DROP TABLE IF EXISTS member");
+                
+                // Create tables
+                stmt.execute("CREATE TABLE kategori (id INT AUTO_INCREMENT PRIMARY KEY, nama VARCHAR(100) NOT NULL)");
+                stmt.execute("CREATE TABLE menu (id INT AUTO_INCREMENT PRIMARY KEY, nama VARCHAR(100) NOT NULL, kategori_id INT, harga DECIMAL(10,2) NOT NULL, stok INT DEFAULT 0, FOREIGN KEY (kategori_id) REFERENCES kategori(id))");
+                stmt.execute("CREATE TABLE member (id INT AUTO_INCREMENT PRIMARY KEY, nama VARCHAR(100) NOT NULL, discount DECIMAL(5,4) DEFAULT 0.10)");
+                
+                // SAMPLE DATA - FIX FK ERROR
+                stmt.execute("INSERT INTO kategori (nama) VALUES ('Makanan')");
+                stmt.execute("INSERT INTO kategori (nama) VALUES ('Minuman')");
+                stmt.execute("INSERT INTO kategori (nama) VALUES ('Cemilan')");
+                stmt.execute("INSERT INTO menu (nama, kategori_id, harga, stok) VALUES ('Nasi Goreng', 1, 15000, 50)");
+                stmt.execute("INSERT INTO menu (nama, kategori_id, harga, stok) VALUES ('Mie Goreng', 1, 12000, 40)");
+                stmt.execute("INSERT INTO menu (nama, kategori_id, harga, stok) VALUES ('Es Teh', 2, 5000, 100)");
+                stmt.execute("INSERT INTO member (nama, discount) VALUES ('Silver', 0.05)");
+                stmt.execute("INSERT INTO member (nama, discount) VALUES ('Gold', 0.10)");
+                stmt.execute("INSERT INTO member (nama, discount) VALUES ('Platinum', 0.15)");
+                
+                System.out.println("✅ Database + sample data ready!");
             }
-        } catch (ClassNotFoundException e) {
-            System.err.println("MySQL driver not found: " + e.getMessage());
-        } catch (SQLException e) {
-            System.err.println("DB init error: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("DB Error: " + e.getMessage());
         }
     }
 
-    // Kategori methods
+    // KATEGORI CRUD
     public void createKategori(String nama) {
         String sql = "INSERT INTO kategori(nama) VALUES(?)";
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, nama);
             pstmt.executeUpdate();
-            System.out.println("Kategori dibuat.");
+            System.out.println("✅ Kategori '" + nama + "' dibuat");
         } catch (SQLException e) {
-            System.err.println("Error buat kategori: " + e.getMessage());
+            System.err.println("❌ Error: " + e.getMessage());
         }
     }
 
     public List<Map<String, Object>> readAllKategori() {
-        List<Map<String, Object>> kategori = new ArrayList<>();
+        List<Map<String, Object>> list = new ArrayList<>();
         String sql = "SELECT * FROM kategori";
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
                 Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                Map<String, Object> kat = new HashMap<>();
-                kat.put("id", rs.getInt("id"));
-                kat.put("nama", rs.getString("nama"));
-                kategori.add(kat);
+                Map<String, Object> row = new HashMap<>();
+                row.put("id", rs.getInt("id"));
+                row.put("nama", rs.getString("nama"));
+                list.add(row);
             }
         } catch (SQLException e) {
-            System.err.println("Error baca kategori: " + e.getMessage());
+            System.err.println("Read kategori error: " + e.getMessage());
         }
-        return kategori;
+        return list;
     }
 
     public void updateKategori(int id, String nama) {
@@ -73,13 +81,9 @@ public class DatabaseManager {
             pstmt.setString(1, nama);
             pstmt.setInt(2, id);
             int rows = pstmt.executeUpdate();
-            if (rows > 0) {
-                System.out.println("Kategori diperbarui.");
-            } else {
-                System.out.println("Kategori tidak ditemukan ID " + id);
-            }
+            if (rows > 0) System.out.println("✅ Kategori updated");
         } catch (SQLException e) {
-            System.err.println("Error update kategori: " + e.getMessage());
+            System.err.println("Update kategori error: " + e.getMessage());
         }
     }
 
@@ -89,18 +93,18 @@ public class DatabaseManager {
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             int rows = pstmt.executeUpdate();
-            if (rows > 0) {
-                System.out.println("Kategori dihapus.");
-            } else {
-                System.out.println("Kategori tidak ditemukan ID " + id);
-            }
+            if (rows > 0) System.out.println("✅ Kategori deleted");
         } catch (SQLException e) {
-            System.err.println("Error hapus kategori: " + e.getMessage());
+            System.err.println("Delete kategori error: " + e.getMessage());
         }
     }
 
-    // Menu methods
+    // MENU CRUD + FK VALIDATION
     public void createMenu(String nama, int kategoriId, double harga, int stok) {
+        if (!kategoriExists(kategoriId)) {
+            System.err.println("❌ Kategori ID " + kategoriId + " tidak ada!");
+            return;
+        }
         String sql = "INSERT INTO menu(nama, kategori_id, harga, stok) VALUES(?, ?, ?, ?)";
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -109,32 +113,44 @@ public class DatabaseManager {
             pstmt.setDouble(3, harga);
             pstmt.setInt(4, stok);
             pstmt.executeUpdate();
-            System.out.println("Menu dibuat.");
+            System.out.println("✅ Menu '" + nama + "' dibuat");
         } catch (SQLException e) {
-            System.err.println("Error buat menu: " + e.getMessage());
+            System.err.println("❌ Menu error: " + e.getMessage());
+        }
+    }
+
+    private boolean kategoriExists(int id) {
+        String sql = "SELECT 1 FROM kategori WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            return false;
         }
     }
 
     public List<Map<String, Object>> readAllMenu() {
-        List<Map<String, Object>> menus = new ArrayList<>();
-        String sql = "SELECT m.*, k.nama as kat_nama FROM menu m LEFT JOIN kategori k ON m.kategori_id = k.id";
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT m.*, k.nama as kat_nama FROM menu m LEFT JOIN kategori k ON m.kategori_id = k.id ORDER BY m.id";
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
                 Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                Map<String, Object> menu = new HashMap<>();
-                menu.put("id", rs.getInt("id"));
-                menu.put("nama", rs.getString("nama"));
-                menu.put("kategori_id", rs.getInt("kategori_id"));
-                menu.put("kat_nama", rs.getString("kat_nama"));
-                menu.put("harga", rs.getDouble("harga"));
-                menu.put("stok", rs.getInt("stok"));
-                menus.add(menu);
+                Map<String, Object> row = new HashMap<>();
+                row.put("id", rs.getInt("id"));
+                row.put("nama", rs.getString("nama"));
+                row.put("kat_nama", rs.getString("kat_nama"));
+                row.put("harga", rs.getDouble("harga"));
+                row.put("stok", rs.getInt("stok"));
+                list.add(row);
             }
         } catch (SQLException e) {
-            System.err.println("Error baca menu: " + e.getMessage());
+            System.err.println("Read menu error: " + e.getMessage());
         }
-        return menus;
+        return list;
     }
 
     public Map<String, Object> readMenuById(int id) {
@@ -148,19 +164,22 @@ public class DatabaseManager {
                     menu = new HashMap<>();
                     menu.put("id", rs.getInt("id"));
                     menu.put("nama", rs.getString("nama"));
-                    menu.put("kategori_id", rs.getInt("kategori_id"));
                     menu.put("kat_nama", rs.getString("kat_nama"));
                     menu.put("harga", rs.getDouble("harga"));
                     menu.put("stok", rs.getInt("stok"));
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error baca menu ID " + id + ": " + e.getMessage());
+            System.err.println("Menu ID error: " + e.getMessage());
         }
         return menu;
     }
 
     public void updateMenu(int id, String nama, int kategoriId, double harga, int stok) {
+        if (!kategoriExists(kategoriId)) {
+            System.err.println("❌ Kategori ID " + kategoriId + " tidak ada!");
+            return;
+        }
         String sql = "UPDATE menu SET nama = ?, kategori_id = ?, harga = ?, stok = ? WHERE id = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -170,13 +189,9 @@ public class DatabaseManager {
             pstmt.setInt(4, stok);
             pstmt.setInt(5, id);
             int rows = pstmt.executeUpdate();
-            if (rows > 0) {
-                System.out.println("Menu diperbarui.");
-            } else {
-                System.out.println("Menu tidak ditemukan ID " + id);
-            }
+            if (rows > 0) System.out.println("✅ Menu updated");
         } catch (SQLException e) {
-            System.err.println("Error update menu: " + e.getMessage());
+            System.err.println("Update menu error: " + e.getMessage());
         }
     }
 
@@ -186,64 +201,113 @@ public class DatabaseManager {
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             int rows = pstmt.executeUpdate();
-            if (rows > 0) {
-                System.out.println("Menu dihapus.");
-            } else {
-                System.out.println("Menu tidak ditemukan ID " + id);
-            }
+            if (rows > 0) System.out.println("✅ Menu deleted");
         } catch (SQLException e) {
-            System.err.println("Error hapus menu: " + e.getMessage());
+            System.err.println("Delete menu error: " + e.getMessage());
         }
     }
 
-    public void updateStok(int menuId, int qty) {
+    public void updateStok(int id, int qty) {
         String sql = "UPDATE menu SET stok = stok - ? WHERE id = ?";
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, qty);
-            pstmt.setInt(2, menuId);
-            int rows = pstmt.executeUpdate();
-            if (rows > 0) {
-                System.out.println("Stok menu ID " + menuId + " dikurangi " + qty);
-            } else {
-                System.out.println("Menu ID " + menuId + " tidak ditemukan");
-            }
+            pstmt.setInt(2, id);
+            pstmt.executeUpdate();
         } catch (SQLException e) {
-            System.err.println("Error update stok: " + e.getMessage());
+            System.err.println("Update stok error: " + e.getMessage());
         }
     }
 
-    // Member methods (tingkat member)
+    // MEMBER CRUD
     public void createMember(String nama, double discount) {
-        String sql = "INSERT INTO member(nama, discount) VALUES(?, ?)";
+        String sql = "INSERT INTO member(nama, discount) VALUES (?, ?)";
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, nama);
             pstmt.setDouble(2, discount);
             pstmt.executeUpdate();
-            System.out.println("Tingkat member dibuat.");
+            System.out.println("✅ Member '" + nama + "' dibuat");
         } catch (SQLException e) {
-            System.err.println("Error buat tingkat member: " + e.getMessage());
+            System.err.println("Create member error: " + e.getMessage());
         }
     }
 
     public List<Map<String, Object>> readAllMembers() {
-        List<Map<String, Object>> members = new ArrayList<>();
-        String sql = "SELECT * FROM member";
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT * FROM member ORDER BY id";
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
                 Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                Map<String, Object> mem = new HashMap<>();
-                mem.put("id", rs.getInt("id"));
-                mem.put("nama", rs.getString("nama"));
-                mem.put("discount", rs.getDouble("discount"));
-                members.add(mem);
+                Map<String, Object> row = new HashMap<>();
+                row.put("id", rs.getInt("id"));
+                row.put("nama", rs.getString("nama"));
+                row.put("discount", rs.getDouble("discount"));
+                list.add(row);
             }
         } catch (SQLException e) {
-            System.err.println("Error baca tingkat member: " + e.getMessage());
+            System.err.println("Read members error: " + e.getMessage());
         }
-        return members;
+        return list;
+    }
+
+    public void updateMember(int id, String nama, double discount) {
+        String sql = "UPDATE member SET nama = ?, discount = ? WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, nama);
+            pstmt.setDouble(2, discount);
+            pstmt.setInt(3, id);
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) System.out.println("✅ Member updated");
+        } catch (SQLException e) {
+            System.err.println("Update member error: " + e.getMessage());
+        }
+    }
+
+    public void deleteMember(int id) {
+        String sql = "DELETE FROM member WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            int rows = pstmt.executeUpdate();
+            if (rows > 0) System.out.println("✅ Member deleted");
+        } catch (SQLException e) {
+            System.err.println("Delete member error: " + e.getMessage());
+        }
+    }
+
+    // SEARCH MENU
+    public List<Map<String, Object>> searchMenus(String query) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT m.*, k.nama as kat_nama FROM menu m LEFT JOIN kategori k ON m.kategori_id = k.id WHERE m.nama LIKE ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, "%" + query + "%");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("id", rs.getInt("id"));
+                    row.put("nama", rs.getString("nama"));
+                    row.put("kat_nama", rs.getString("kat_nama"));
+                    row.put("harga", rs.getDouble("harga"));
+                    row.put("stok", rs.getInt("stok"));
+                    list.add(row);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Search error: " + e.getMessage());
+        }
+        return list;
+    }
+
+    public static Map<String, Object> readMemberByIdStatic(int id) {
+        return new DatabaseManager().readMemberById(id);
+    }
+
+    public static Map<String, Object> readMemberByNameStatic(String name) {
+        return new DatabaseManager().readMemberByName(name);
     }
 
     public Map<String, Object> readMemberById(int id) {
@@ -261,69 +325,9 @@ public class DatabaseManager {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error baca tingkat member ID " + id + ": " + e.getMessage());
+            System.err.println("Member ID " + id + " error: " + e.getMessage());
         }
         return member;
-    }
-
-    public void updateMember(int id, String nama, double discount) {
-        String sql = "UPDATE member SET nama = ?, discount = ? WHERE id = ?";
-        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, nama);
-            pstmt.setDouble(2, discount);
-            pstmt.setInt(3, id);
-            int rows = pstmt.executeUpdate();
-            if (rows > 0) {
-                System.out.println("Tingkat member diperbarui.");
-            } else {
-                System.out.println("Tingkat member tidak ditemukan ID " + id);
-            }
-        } catch (SQLException e) {
-            System.err.println("Error update tingkat member: " + e.getMessage());
-        }
-    }
-
-    public void deleteMember(int id) {
-        String sql = "DELETE FROM member WHERE id = ?";
-        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
-            int rows = pstmt.executeUpdate();
-            if (rows > 0) {
-                System.out.println("Tingkat member dihapus.");
-            } else {
-                System.out.println("Tingkat member tidak ditemukan ID " + id);
-            }
-        } catch (SQLException e) {
-            System.err.println("Error hapus tingkat member: " + e.getMessage());
-        }
-    }
-
-    // Search menus
-
-    public List<Map<String, Object>> searchMenus(String query) {
-        List<Map<String, Object>> menus = new ArrayList<>();
-        String sql = "SELECT m.*, k.nama as kat_nama FROM menu m LEFT JOIN kategori k ON m.kategori_id = k.id WHERE m.nama LIKE ?";
-        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
-                PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, "%" + query + "%");
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    Map<String, Object> menu = new HashMap<>();
-                    menu.put("id", rs.getInt("id"));
-                    menu.put("nama", rs.getString("nama"));
-                    menu.put("kategori_id", rs.getInt("kategori_id"));
-                    menu.put("kat_nama", rs.getString("kat_nama"));
-                    menu.put("harga", rs.getDouble("harga"));
-                    menu.put("stok", rs.getInt("stok"));
-                    menus.add(menu);
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error search menu '" + query + "': " + e.getMessage());
-        }
-        return menus;
     }
 
     public Map<String, Object> readMemberByName(String name) {
@@ -341,10 +345,9 @@ public class DatabaseManager {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error baca member '" + name + "': " + e.getMessage());
+            System.err.println("Member name error: " + e.getMessage());
         }
         return member;
     }
-
 }
 

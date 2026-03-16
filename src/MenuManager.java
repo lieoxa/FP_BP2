@@ -18,11 +18,30 @@ public class MenuManager {
             scanner.nextLine();
 
             switch (sub) {
-                case 1 -> {
+case 1 -> {
                     System.out.print("Nama menu: ");
                     String nama = scanner.nextLine();
-                    System.out.print("ID Kategori: ");
-                    int katId = scanner.nextInt();
+                    
+                    // AUTO SELECT KATEGORI
+                    List<Map<String, Object>> kategories = db.readAllKategori();
+                    if (kategories.isEmpty()) {
+                        System.out.println("❌ Tambah kategori dulu!");
+                        break;
+                    }
+                    System.out.println("\n--- Pilih Kategori ---");
+                    for (int i = 0; i < kategories.size(); i++) {
+                        Map<String, Object> kat = kategories.get(i);
+                        System.out.printf("%d. %s (ID: %d)%n", i+1, kat.get("nama"), kat.get("id"));
+                    }
+                    System.out.print("Nomor kategori: ");
+                    int katIndex = scanner.nextInt() - 1;
+                    scanner.nextLine();
+                    if (katIndex < 0 || katIndex >= kategories.size()) {
+                        System.out.println("❌ Pilihan tidak valid!");
+                        break;
+                    }
+                    int katId = (Integer) kategories.get(katIndex).get("id");
+                    
                     System.out.print("Harga: ");
                     double harga = scanner.nextDouble();
                     System.out.print("Stok: ");
@@ -30,6 +49,7 @@ public class MenuManager {
                     scanner.nextLine();
                     db.createMenu(nama, katId, harga, stok);
                 }
+
                 case 2 -> {
                     List<Map<String, Object>> menus = db.readAllMenu();
                     if (menus.isEmpty()) {

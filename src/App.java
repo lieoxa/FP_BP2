@@ -1,4 +1,6 @@
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class App {
@@ -25,7 +27,9 @@ public class App {
                     MemberManager.crudMembers(scanner);
                 case 4 ->
                     transaksi();
-                case 5 -> {
+                case 5 ->
+                    lihatRiwayatTransaksi();
+                case 6 -> {
                     System.out.println("Terima kasih!");
                     running = false;
                 }
@@ -41,7 +45,8 @@ public class App {
         System.out.println("2. CRUD Menu");
         System.out.println("3. CRUD Tingkat Member");
         System.out.println("4. Transaksi Pesanan");
-        System.out.println("5. Keluar");
+        System.out.println("5. Riwayat Transaksi");
+        System.out.println("6. Keluar");
         System.out.print("Pilih: ");
     }
 
@@ -99,12 +104,14 @@ public class App {
             System.out.printf("%-25s %5s %10s %12s%n", "Nama Menu", "Qty", "Harga", "Total");
             System.out.println("--------------------------------------------------------");
 
+            Map<Integer, Double> cartDetails = new HashMap<>(); // menuId -> harga_unit
             for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
                 int mid = entry.getKey();
                 int q = entry.getValue();
                 Map<String, Object> m = db.readMenuById(mid);
                 double harga = (Double) m.get("harga");
                 double itemTotal = harga * q;
+                cartDetails.put(mid, harga);
                 System.out.printf("%-25s %5d Rp%,10.0f Rp%,12.0f%n",
                         m.get("nama"), q, harga, itemTotal);
             }
@@ -133,9 +140,22 @@ public class App {
             System.out.printf("TOTAL BAYAR: %52s%n", "Rp " + String.format("%,.0f", finalTotal));
             System.out.println("=========================================================");
 
-            // Update stock
+            // Update stock FIRST
             for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
                 db.updateStok(entry.getKey(), entry.getValue());
+            }
+
+            // SAVE TRANSAKSI
+            int pesananId = db.createPesanan(finalTotal, memberName);
+            if (pesananId != -1) {
+                for (Map.Entry<Integer, Integer> entry : cart.entrySet()) {
+                    int mid = entry.getKey();
+                    int q = entry.getValue();
+                    double harga = cartDetails.get(mid);
+                    double sub = harga * q;
+                    db.addDetailPesanan(pesananId, mid, q, harga, sub);
+                }
+                System.out.println("✅ Transaksi disimpan dengan ID: " + pesananId);
             }
 
             // ⭐ BUKTI TRANSAKSI ⭐
@@ -143,8 +163,8 @@ public class App {
             System.out.println("                    BUKTI TRANSAKSI");
             System.out.println("                    WARUNG TEGAL MK");
             System.out.println("═".repeat(50));
-            System.out.printf("No. Transaksi : #%04d%n", (int) (Math.random() * 10000));
-            System.out.printf("Tanggal       : %s%n", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+            System.out.printf("No. Transaksi : #%04d%n", pesananId);
+            System.out.printf("Tanggal       : %s%n", LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
             System.out.printf("Kasir         : %s%n", System.getProperty("user.name").toUpperCase());
             System.out.println("═".repeat(50));
             System.out.printf("%-25s %5s %10s %12s%n", "Nama Menu", "Qty", "@Harga", "Total");
@@ -170,9 +190,61 @@ public class App {
             System.out.println("Terima kasih telah berbelanja!");
             System.out.println("       Barang tidak dapat ditukar");
             System.out.println("       atau dikembalikan.");
+            System.out.println("       Simpan No. Transaksi untuk bukti.");
             System.out.println("═".repeat(50));
         } else {
             System.out.println("Keranjang kosong.");
         }
+    }
+
+    private static void lihatRiwayatTransaksi() {
+        System.out.println("\n=== RIWAYAT TRANSAKSI TERAKHIR ===");
+        List<Map<String, Object>> riwayat = db.riwayatPesanan();
+        if (riwayat.isEmpty()) {
+            System.out.println("Belum ada transaksi.");
+            return;
+        }
+
+        System.out.printf("%-5s %-19s %15s %10s%n", "ID", "Tanggal", "Total", "Member");
+        System.out.println("-".repeat(55));
+
+        for (Map<String, Object> r : riwayat) {
+            System.out.printf("%-5d %-19s Rp%,12.0f %10s%n",
+                    r.get("id"),
+                    ((java.sql.Timestamp) r.get("wkt")).toString().substring(0, 16),
+                    r.get("total"),
+                    r.get("member"));
+        }
+
+        System.out.print("\nLihat detail ID (0 batal): ");
+        int id = scanner.nextInt();
+        scanner.nextLine();
+        if (id == 0) {
+            return;
+        }
+
+        List<Map<String, Object>> details = db.detailPesanan(id);
+        if (details.isEmpty()) {
+            System.out.println("Transaksi tidak ditemukan.");
+            return;
+        }
+
+        Map<String, Object> pesanan = riwayat.stream().filter(p -> ((Integer) p.get("id")) == id).findFirst().orElse(null);
+        System.out.println("\n=== DETAIL TRANSAKSI #" + id + " ===");
+        System.out.printf("Tanggal: %s%n", ((java.sql.Timestamp) pesanan.get("wkt")).toString());
+        System.out.printf("Member: %s%n", pesanan.get("member"));
+        System.out.printf("TOTAL: Rp %, .0f%n", pesanan.get("total"));
+        System.out.println("\nItem:");
+        System.out.printf("%-25s %5s %10s %12s%n", "Menu", "Qty", "@Harga", "Subtotal");
+        System.out.println("-".repeat(55));
+
+        for (Map<String, Object> d : details) {
+            System.out.printf("%-25s %5d Rp%,10.0f Rp%,12.0f%n",
+                    d.get("menu_nama"),
+                    d.get("qty"),
+                    d.get("harga_unit"),
+                    d.get("subtotal"));
+        }
+        System.out.println("-".repeat(55));
     }
 }

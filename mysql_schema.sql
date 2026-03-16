@@ -41,7 +41,7 @@ INSERT INTO menu (nama, kategori_id, harga, stok) VALUES
 ('Teh Hangat', 2, 5000.00, 40),
 ('Es Jeruk', 2, 8000.00, 60);
 
-INSERT INTO member (nama, discount) VALUES 
+
 ('Silver', 0.10),
 ('Gold', 0.15),
 ('Platinum', 0.20);
@@ -49,4 +49,30 @@ INSERT INTO member (nama, discount) VALUES
 SELECT 'Kategori:' as Table_Name; SELECT * FROM kategori;
 SELECT 'Menu:' as Table_Name; SELECT * FROM menu;
 SELECT 'Member:' as Table_Name; SELECT * FROM member;
+
+-- Transaksi tables
+DROP TABLE IF EXISTS detail_pesanan;
+DROP TABLE IF EXISTS pesanan;
+
+CREATE TABLE pesanan (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    wkt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    total DECIMAL(10,2),
+    member VARCHAR(50)
+);
+
+CREATE TABLE detail_pesanan (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pesanan_id INT,
+    menu_id INT,
+    qty INT,
+    harga_unit DECIMAL(10,2),
+    subtotal DECIMAL(10,2),
+    FOREIGN KEY (pesanan_id) REFERENCES pesanan(id),
+    FOREIGN KEY (menu_id) REFERENCES menu(id)
+);
+
+-- Sample transaksi
+INSERT INTO pesanan (total, member) VALUES (35000, 'Gold');
+INSERT INTO detail_pesanan (pesanan_id, menu_id, qty, harga_unit, subtotal) VALUES (1, 1, 2, 15000, 30000), (1, 3, 1, 5000, 5000);
 

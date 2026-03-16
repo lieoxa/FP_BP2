@@ -5,10 +5,9 @@ import java.util.*;
 
 public class App {
 
-    private static Scanner scanner = new Scanner(System.in);
-    private static MenuSearcher menuSearcher = new MenuSearcher();
-    private static DatabaseManager db = new DatabaseManager();
-    private static MemberManager memberMgr = new MemberManager();
+    private static final Scanner scanner = new Scanner(System.in);
+    private static final MenuSearcher menuSearcher = new MenuSearcher();
+    private static final DatabaseManager db = new DatabaseManager();
 
     public static void main(String[] args) {
         System.out.println("=== Warung Tegal Kasir ===");
@@ -209,11 +208,13 @@ public class App {
         System.out.println("-".repeat(55));
 
         for (Map<String, Object> r : riwayat) {
-            System.out.printf("%-5d %-19s Rp%,12.0f %10s%n",
+            List<Map<String, Object>> detailsCount = db.detailPesanan((Integer) r.get("id"));
+            System.out.printf("%-5d %-19s Rp%,12.0f %-10s %d item%n",
                     r.get("id"),
                     ((java.sql.Timestamp) r.get("wkt")).toString().substring(0, 16),
                     r.get("total"),
-                    r.get("member"));
+                    r.get("member"),
+                    detailsCount.size());
         }
 
         System.out.print("\nLihat detail ID (0 batal): ");

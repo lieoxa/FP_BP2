@@ -41,7 +41,7 @@ INSERT INTO menu (nama, kategori_id, harga, stok) VALUES
 ('Teh Hangat', 2, 5000.00, 40),
 ('Es Jeruk', 2, 8000.00, 60);
 
-
+INSERT INTO member (nama, discount) VALUES 
 ('Silver', 0.10),
 ('Gold', 0.15),
 ('Platinum', 0.20);

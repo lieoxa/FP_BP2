@@ -43,7 +43,7 @@ public class DatabaseManager {
 
                 // System.out.println("✅ Database + sample data ready!");
             }
-        } catch (Exception e) {
+        } catch (ClassNotFoundException | SQLException e) {
             System.err.println("DB Error: " + e.getMessage());
         }
     }

@@ -22,7 +22,10 @@ public class DatabaseManager {
                         "CREATE TABLE IF NOT EXISTS menu (id INT AUTO_INCREMENT PRIMARY KEY, nama VARCHAR(100) NOT NULL, kategori_id INT, harga DECIMAL(10,2) NOT NULL, stok INT DEFAULT 0, FOREIGN KEY (kategori_id) REFERENCES kategori(id))");
                 stmt.execute(
                         "CREATE TABLE IF NOT EXISTS member (id INT AUTO_INCREMENT PRIMARY KEY, nama VARCHAR(100) NOT NULL, discount DECIMAL(5,4) DEFAULT 0.10)");
-                stmt.execute("INSERT IGNORE INTO member (nama, discount) VALUES ('Silver', 0.05), ('Gold', 0.10), ('Platinum', 0.15)");
+
+                stmt.execute("DELETE FROM member");
+                stmt.execute("INSERT INTO member (nama, discount) VALUES ('Silver', 0.05), ('Gold', 0.10), ('Platinum', 0.15)");
+
                 // System.out.println("MySQL Database Connected");
             }
         } catch (ClassNotFoundException e) {
@@ -298,6 +301,7 @@ public class DatabaseManager {
     }
 
     // Search menus
+
     public List<Map<String, Object>> searchMenus(String query) {
         List<Map<String, Object>> menus = new ArrayList<>();
         String sql = "SELECT m.*, k.nama as kat_nama FROM menu m LEFT JOIN kategori k ON m.kategori_id = k.id WHERE m.nama LIKE ?";
@@ -321,5 +325,26 @@ public class DatabaseManager {
         }
         return menus;
     }
+
+    public Map<String, Object> readMemberByName(String name) {
+        Map<String, Object> member = null;
+        String sql = "SELECT * FROM member WHERE nama LIKE ?";
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS);
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, "%" + name + "%");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    member = new HashMap<>();
+                    member.put("id", rs.getInt("id"));
+                    member.put("nama", rs.getString("nama"));
+                    member.put("discount", rs.getDouble("discount"));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error baca member '" + name + "': " + e.getMessage());
+        }
+        return member;
+    }
+
 }
 

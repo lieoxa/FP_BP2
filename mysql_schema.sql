@@ -42,8 +42,9 @@ INSERT INTO menu (nama, kategori_id, harga, stok) VALUES
 ('Es Jeruk', 2, 8000.00, 60);
 
 INSERT INTO member (nama, discount) VALUES 
-('Felix VIP', 0.15),
-('Member Biasa', 0.10);
+('Silver', 0.10),
+('Gold', 0.15),
+('Platinum', 0.20);
 
 SELECT 'Kategori:' as Table_Name; SELECT * FROM kategori;
 SELECT 'Menu:' as Table_Name; SELECT * FROM menu;

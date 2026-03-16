@@ -1,4 +1,4 @@
-import java.util.*;
+    import java.util.*;
 import java.util.Scanner;
 
 public class MemberManager {
@@ -39,7 +39,7 @@ public class MemberManager {
         db.createMember(nama, disc);
     }
 
-    private static void listTingkat() {
+    public static void listTingkat() {
         List<Map<String, Object>> members = db.readAllMembers();
         if (members.isEmpty()) {
             System.out.println("Belum ada tingkat member.");
@@ -77,13 +77,15 @@ public class MemberManager {
         db.deleteMember(id);
     }
 
-    public static double getDiscountById(int id) {
-        Map<String, Object> member = db.readMemberById(id);
-        return member != null ? (Double) member.get("discount") : 0.0;
+
+    public static Map<String, Object> findMember(String input) {
+        try {
+            int id = Integer.parseInt(input);
+            return db.readMemberById(id);
+        } catch (NumberFormatException e) {
+            return db.readMemberByName(input);
+        }
     }
 
-    public static Map<String, Object> getMemberById(int id) {
-        return db.readMemberById(id);
-    }
 }
 
